@@ -8,12 +8,12 @@
 #ifndef PARAMS_H_
 #define PARAMS_H_
 
-struct Params {
+struct Paramset {
 public:
 	std::string f_name;	// File name
 	int n_frames;		// Number of frames
 	int np_frame;		// Steps per frame
-	float h;			// Particle size
+	float h;			// Particle neighbour size
 	float dt;			// Time step size
 	float rho_0;		// Reference density
 	float k;			// Bulk modulus
