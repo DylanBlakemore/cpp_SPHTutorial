@@ -15,9 +15,13 @@
 class ParticleSystem {
 public:
 	ParticleSystem();
-	const float  PI_F = 3.14159265358979f;
+	const static float  PI_F = 3.14159265358979f;
 	void computeDensities();
 	void computeAccelerations();
+	void leapfrogStep();
+	void leapfrogStart();
+	void reflectBC();
+	void dampReflect(int which, float barrier, Particle* particle);
 private:
 	int n;								// Number of particles
 	float mass;							// Particle mass

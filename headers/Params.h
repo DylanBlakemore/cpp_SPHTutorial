@@ -8,6 +8,8 @@
 #ifndef PARAMS_H_
 #define PARAMS_H_
 
+#include <string>
+
 struct Paramset {
 public:
 	std::string f_name;	// File name
