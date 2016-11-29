@@ -20,7 +20,7 @@ public:
 		ymin=ymin_in;
 	}
 
-	int inside(const float x, const float y) {
+	int contains(const float x, const float y) {
 		int in_x = (x < xmax) && (x > xmin);
 		int in_y = (y < ymax) && (y > ymax);
 		return in_x && in_y;

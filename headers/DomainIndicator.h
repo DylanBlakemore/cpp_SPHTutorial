@@ -11,7 +11,7 @@
 class DomainIndicator {
 public:
 	DomainIndicator();
-	virtual int inside(const float x, const float y){return 0;}
+	virtual int contains(const float x, const float y){return 0;}
 	virtual ~DomainIndicator(){}
 };
 

@@ -10,7 +10,12 @@
 
 class Particle {
 public:
-	Particle();
+	Particle(float x_in, float y_in) {
+		x[0] = x_in;
+		x[1] = y_in;
+		v[0] = 0;
+		v[1] = 0;
+	}
 	float computeSquaredDistanceTo(const Particle* in_part);
 	float density;	// Density
 	float x[2];		// Position

@@ -18,7 +18,7 @@ public:
 		radius = radius_in;
 	}
 
-	int inside(const float x, const float y) {
+	int contains(const float x, const float y) {
 		float dx = x - xcentre;
 		float dy = y - ycentre;
 		float r2 = dx*dx + dy*dy;
