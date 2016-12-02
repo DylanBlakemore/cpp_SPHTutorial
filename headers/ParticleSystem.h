@@ -17,29 +17,34 @@
 
 class ParticleSystem {
 public:
-	ParticleSystem(Paramset* params_in, std::vector<DomainIndicator>& domains_in) {
+	ParticleSystem(Paramset* params_in, std::vector<DomainIndicator*> domains_in) {
 		params = params_in;
 		domains = domains_in;
 		placeParticles();
 		normalizeMass();
 	}
 	const static float  PI_F = 3.14159265358979f;
-	int n;
+	// Boundaries of domain
+	const static float XMIN = 0.0;
+	const static float XMAX = 1.0;
+	const static float YMIN = 0.0;
+	const static float YMAX = 1.0;
+	const static float scale = 1.0;
+
+	int n;						// Number of particles
+	float mass;					// Particle mass
+
 	void leapfrogStep();
 	void leapfrogStart();
-	void writeHeader();
-	void writeState();
-	const std::vector<Particle>* getParticles(){return &particles;}
-private:							  // Number of particles
-	float mass;							  // Particle mass
-	Paramset* params;					  // Struct containing the system parameters
+	void computeAccelerations();
 	std::vector<Particle> particles;	  // Vector containing the particle objects
-	std::vector<DomainIndicator> domains; // Vector containing the domains to fill with particles
+private:
+	Paramset* params;					  // Struct containing the system parameters
+	std::vector<DomainIndicator*> domains; // Vector containing the domains to fill with particles
 
 	void reflectBC();
-	void dampReflect(int which, float barrier, Particle* particle);
+	void dampReflect(int which, float barrier, int i);
 	void computeDensities();
-	void computeAccelerations();
 	void placeParticles();
 	void normalizeMass();
 };

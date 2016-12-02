@@ -5,21 +5,25 @@
  *      Author: dylan
  */
 #include <math.h>
+#include <iostream>
 #include "../headers/ParticleSystem.h"
 
 void ParticleSystem::computeDensities() {
-	float C = 4 * mass / (PI_F * pow(params->h,8));
+	float h = params->h;
+	float C = 4 * mass / (PI_F * pow(h,8));
 
 	for(int i = 0; i < n; i++) {
 		particles[i].density = 0.0; // Reset density to 0
-		particles[i].density += 4 * mass / (PI_F * pow(params->h,2)); // Contribution of particle's density to itself
+		particles[i].density += 4 * mass / (PI_F * pow(h,2)); // Contribution of particle's density to itself
 
 		for(int j = i+1; j < n; j++) {
-			float r2 = particles[i].computeSquaredDistanceTo(&particles[j]);
-			float z = pow(params->h,2) - r2;
+			float dx = particles[i].x[0] - particles[j].x[0];
+			float dy = particles[i].x[1] - particles[j].x[1];
+			float r2 = dx*dx + dy*dy;
+			float z  = h*h - r2;
 
 			if(z > 0) {
-				float rho_ij = C * pow(z,3);
+				float rho_ij = C * z*z*z;
 				particles[i].density += rho_ij;
 				particles[j].density += rho_ij;
 			}
@@ -59,7 +63,7 @@ void ParticleSystem::computeAccelerations() {
 				const float rho_j = particles[j].density;
 				float q = sqrt(r2)/h;
 				float u = 1 - q;
-				float w_0 = C_0 * u/(rho_i * rho_j);
+				float w_0 = C_0 * u/(rho_i*rho_j);
 				float w_p = w_0 * C_p * (rho_i + rho_j - 2 * rho_0) * u/q;
 				float w_v = w_0 * C_v;
 				float dv_x = particles[i].v[0] - particles[j].v[0];
@@ -82,8 +86,8 @@ void ParticleSystem::leapfrogStep() {
 	}
 	// Update full-step velocity
 	for(int i = 0; i < n; i++) {
-		particles[i].v[0] += particles[i].a[0] * dt/2;
-		particles[i].v[1] += particles[i].a[1] * dt/2;
+		particles[i].v[0] += particles[i].vh[0] + particles[i].a[0] * dt/2;
+		particles[i].v[1] += particles[i].vh[1] + particles[i].a[1] * dt/2;
 	}
 	// Update position
 	for(int i = 0; i < n; i++) {
@@ -116,17 +120,11 @@ void ParticleSystem::leapfrogStart() {
 }
 
 void ParticleSystem::reflectBC() {
-	// Boundaries of domain
-	const float XMIN = 0.0;
-	const float XMAX = 1.0;
-	const float YMIN = 0.0;
-	const float YMAX = 1.0;
-
 	for(int i = 0; i < n; i++) {
-		if(particles[i].x[0] < XMIN) dampReflect(0, XMIN, &particles[i]);
-		if(particles[i].x[0] > XMAX) dampReflect(0, XMAX, &particles[i]);;
-		if(particles[i].x[1] < YMIN) dampReflect(1, YMIN, &particles[i]);;
-		if(particles[i].x[1] < YMAX) dampReflect(1, YMAX, &particles[i]);;
+		if(particles[i].x[0] < XMIN) dampReflect(0, XMIN, i);
+		if(particles[i].x[0] > XMAX) dampReflect(0, XMAX, i);;
+		if(particles[i].x[1] < YMIN) dampReflect(1, YMIN, i);;
+		if(particles[i].x[1] > YMAX) dampReflect(1, YMAX, i);;
 	}
 }
 
@@ -136,32 +134,38 @@ void ParticleSystem::reflectBC() {
  * barrier: 	position of barrier
  * particle:	particle under consideration
  */
-void ParticleSystem::dampReflect(int which, float barrier, Particle* particle) {
+void ParticleSystem::dampReflect(int which, float barrier, int i) {
 	// Coefficient of restitution
 	const float DAMP = 0.75;
 
 	// Ignore degenerate cases
-	if(particle->v[which] == 0)
+	if(particles[i].v[which] == 0) {
 		return;
-
+	}
+	//std::cout << "D" << which << " before: " << particles[i].x[which] << std::endl;
 	// Scale back distance traveled based on time from collision
-	float t_bounce = (particle->x[which] - barrier)/particle->v[which];
-	particle->x[0] -= particle->v[0] * (1 - DAMP) * t_bounce;
-	particle->x[1] -= particle->v[1] * (1 - DAMP) * t_bounce;
+	float t_bounce = (particles[i].x[which] - barrier)/particles[i].v[which];
+	particles[i].x[0] -= particles[i].v[0] * (1 - DAMP) * t_bounce;
+	particles[i].x[1] -= particles[i].v[1] * (1 - DAMP) * t_bounce;
 
 	// Reflect position and velocity
-	particle->x[which] = 2 * barrier - particle->x[which];
-	particle->v[which] = -1 * particle->v[which];
-	particle->vh[which] = -1 * particle->vh[which];
+	particles[i].x[which] = 2 * barrier - particles[i].x[which];
+	particles[i].v[which] = -1 * particles[i].v[which];
+	particles[i].vh[which] = -1 * particles[i].vh[which];
 
 	// Damp the velocities
-	particle->v[0] *= DAMP; particle->vh[0] *= DAMP;
-	particle->v[1] *= DAMP; particle->vh[1] *= DAMP;
+	particles[i].v[0] *= DAMP; particles[i].vh[0] *= DAMP;
+	particles[i].v[1] *= DAMP; particles[i].vh[1] *= DAMP;
+
+	//std::cout << "D" << which << " after: " << particles[i].x[which] << std::endl;
+	//std::cout << "==================================" << std::endl;
 }
 
 void ParticleSystem::placeParticles() {
 	float h = params->h;
 	float hh = h/1.3;
+
+	int count = 0;
 
 	for(float x = 0; x < 1.0; x += hh) {
 		for(float y = 0; y < 1.0; y += hh) {
@@ -173,7 +177,7 @@ void ParticleSystem::placeParticles() {
 			int num_domains = domains.size();
 			int is_inside = 0;
 			for(int i = 0; i < num_domains; i++)
-				is_inside = is_inside || domains[i].contains(x,y);
+				is_inside = is_inside || domains[i]->contains(x,y);
 
 			/* If the point falls inside one of the domains, create a particle and
 			 * add it to the vector of particles.
@@ -182,9 +186,13 @@ void ParticleSystem::placeParticles() {
 				Particle new_part = Particle(x, y);
 				particles.push_back(new_part);
 			}
+			count++;
 		}
 	}
 	n = particles.size();
+	std::cout << "Number of domains: " << domains.size() << std::endl;
+	std::cout << "Number of cells: " << count << std::endl;
+	std::cout << "Number of particles created: " << n << std::endl;
 }
 
 void ParticleSystem::normalizeMass() {
@@ -200,3 +208,4 @@ void ParticleSystem::normalizeMass() {
 	}
 	mass *= (rho_0 * rho_s)/rho_2s;
 }
+

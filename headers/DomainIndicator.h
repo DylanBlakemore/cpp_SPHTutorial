@@ -8,10 +8,13 @@
 #ifndef DOMAININDICATOR_H_
 #define DOMAININDICATOR_H_
 
+#include <iostream>
+
 class DomainIndicator {
 public:
-	DomainIndicator();
-	virtual int contains(const float x, const float y){return 0;}
+	DomainIndicator(){}
+	virtual int contains(const float x, const float y){
+		return 0;}
 	virtual ~DomainIndicator(){}
 };
 

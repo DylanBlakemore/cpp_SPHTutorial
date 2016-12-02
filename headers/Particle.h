@@ -16,7 +16,6 @@ public:
 		v[0] = 0;
 		v[1] = 0;
 	}
-	float computeSquaredDistanceTo(const Particle* in_part);
 	float density;	// Density
 	float x[2];		// Position
 	float v[2];		// Velocity (full step)

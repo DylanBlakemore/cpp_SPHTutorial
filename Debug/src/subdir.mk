@@ -4,19 +4,22 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../src/Particle.cpp \
+../src/OutputFile.cpp \
 ../src/ParticleSystem.cpp \
-../src/cpp_SPHTutorial.cpp 
+../src/cpp_SPHTutorial.cpp \
+../src/inputfile.cpp 
 
 OBJS += \
-./src/Particle.o \
+./src/OutputFile.o \
 ./src/ParticleSystem.o \
-./src/cpp_SPHTutorial.o 
+./src/cpp_SPHTutorial.o \
+./src/inputfile.o 
 
 CPP_DEPS += \
-./src/Particle.d \
+./src/OutputFile.d \
 ./src/ParticleSystem.d \
-./src/cpp_SPHTutorial.d 
+./src/cpp_SPHTutorial.d \
+./src/inputfile.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

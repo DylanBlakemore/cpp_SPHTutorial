@@ -14,7 +14,7 @@ struct Paramset {
 public:
 	Paramset() {
 		// Default parameters
-		f_name 		= "run.out";
+		f_name 		= "sph.out";
 		n_frames 	= 400;
 		np_frame 	= 100;
 		dt 			= 1e-4;

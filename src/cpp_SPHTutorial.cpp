@@ -16,48 +16,72 @@
 #include "../headers/Params.h"
 #include "../headers/Particle.h"
 #include "../headers/ParticleSystem.h"
+#include "../headers/OutputFile.h"
+#include "../headers/inputfile.h"
 
 using namespace std;
 
-void checkState(ParticleSystem* sys) {
-	const std::vector<Particle>* particles = sys->getParticles();
-	for(int i = 0; i < sys->n; i++) {
-		Particle part = (&particles)[i];
-		float xi = part.x[0];
-		float yi = part.x[1];
-		assert(xi >= 0 && xi <= 1);
-		assert(yi >= 0 && yi <= 1);
+void displayPositions(ParticleSystem* p_sys) {
+	for(int i = 0; i < p_sys->n; i++) {
+		std::cout << p_sys->particles[i].x[0] << "," << p_sys->particles[i].x[1] << std::endl;
 	}
 }
 
-ParticleSystem initParticles(Paramset* params) {
-	return 0;
+void checkState(ParticleSystem* sys, OutputFile* outfile, int frame, int step) {
+	/* If an error occurs, close the output file to avoid corruption of existing data */
+	for(int i = 0; i < sys->n; i++) {
+		if(!(sys->particles[i].x[0] >= 0 && sys->particles[i].x[0] <= 1) || !(sys->particles[i].x[1] >= 0 && sys->particles[i].x[1] <= 1)) {
+			outfile->close();
+			std::cout << "--------------------------------------" << std::endl;
+			std::cout << "Error in frame " << frame + 1 <<", step " << step << std::endl;
+			std::cout << "--------------------------------------" << std::endl;
+		}
+		/* Submit error */
+		assert(sys->particles[i].x[0] >= 0 && sys->particles[i].x[0] <= 1);
+		assert(sys->particles[i].x[1] >= 0 && sys->particles[i].x[1] <= 1);
+	}
 }
 
 int main() {
 	Paramset params;
 	params.load(); // Still need to complete
 
-	ParticleSystem p_sys = initParticles(&params);
+	// Create domains in which to place particles and initialize the ParticleSystem object
+	vector<DomainIndicator*> domains;
+
+	BoxIndicator box = BoxIndicator(0.05,0.5,0.5,0.9);
+	domains.push_back(&box);
+	/////////////////////////////////////////////////////////////////////////////////////
+	ParticleSystem p_sys(&params, domains);
+
+	OutputFile outfile(&params, &p_sys);
+	outfile.writeHeader();
 
 	int n_frames = params.n_frames;
 	int np_frame = params.np_frame;
-	float dt = params.dt;
-	int n = p_sys.n;
 
-	p_sys.writeState(); // Still need to complete
+	std::cout << "Processing initial state" << std::endl;
+
+	checkState(&p_sys, &outfile, 0, 0);
+
 	p_sys.computeAccelerations();
 	p_sys.leapfrogStart();
-	checkState(&p_sys);
+	outfile.writeFrame();
 
-	for(int frame = 1; frame < n_frames; frame++) {
+	for(int frame = 0; frame < n_frames; frame++) {
+		std::cout << "Processing frame " << frame + 1 << std::endl;
+		//displayPositions(&p_sys);
 		for(int i = 0; i < np_frame; i++) {
 			p_sys.computeAccelerations();
 			p_sys.leapfrogStep();
-			checkState(&p_sys);
+			//checkState(&p_sys, &outfile, frame, i);
 		}
-		p_sys.writeState();
+		outfile.writeFrame();
 	}
+	outfile.close();
+	std::cout << "All frames processed" << std::endl;
 
+	// Write more readable csv file.
+	InputFile infile(params.f_name);
 	return 0;
 }
