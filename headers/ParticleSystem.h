@@ -23,7 +23,7 @@ public:
 		placeParticles();
 		normalizeMass();
 	}
-	const static float  PI_F = 3.14159265358979f;
+	const static float  PI_F = 3.14159265358979;
 	// Boundaries of domain
 	const static float XMIN = 0.0;
 	const static float XMAX = 1.0;
@@ -47,6 +47,8 @@ private:
 	void computeDensities();
 	void placeParticles();
 	void normalizeMass();
+	float weightFunction(float r, float h);
+	float weightGradient(Particle* p1, Particle* p2, int dim, float h);
 };
 
 

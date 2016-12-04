@@ -8,24 +8,58 @@
 #include <iostream>
 #include "../headers/ParticleSystem.h"
 
+float ParticleSystem::weightFunction(float r, float h) {
+	float func;
+	float normal = 10/(7 * PI_F);
+	float q = r/h;
+
+	if (q >= 2)
+		func = 0;
+	else if (q >= 0 && q < 1)
+		func = 0.25 * pow(2-q,3) - pow(1-q,3);
+	else if (q >= 1 && q < 2)
+		func = 0.25 * pow(2-q,3);
+
+	return func * normal;
+}
+
+float ParticleSystem::weightGradient(Particle* p1, Particle* p2, int dim, float h) {
+	float gradient = 0;
+
+	float dx = p1->x[0] - p2->x[0];
+	float dy = p1->x[1] - p2->x[1];
+	float r	 = sqrt(dx*dx + dy*dy);
+	float q = r/h;
+
+	if(q >= 2)
+		gradient = 0;
+	else if(q >= 1 && q < 2)
+		gradient = ((-3*pow(2 - q,2)) / (4*h)) * (p1->x[dim] - p2->x[dim])/r;
+	else if(q >= 0 && q < 1) {
+		gradient = ( (-3*pow(2 - q,2) / (4*h)) +
+					(-3*pow(1 - q,2)/h) ) * (p1->x[dim] - p2->x[dim])/r;
+	}
+
+	return gradient;
+}
+
 void ParticleSystem::computeDensities() {
 	float h = params->h;
-	float C = 4 * mass / (PI_F * pow(h,8));
+	float C = 4 * mass/(PI_F * pow(h,8));
 
 	for(int i = 0; i < n; i++) {
 		particles[i].density = 0.0; // Reset density to 0
 		particles[i].density += 4 * mass / (PI_F * pow(h,2)); // Contribution of particle's density to itself
 
-		for(int j = i+1; j < n; j++) {
+		for(int j = 0; j < n; j++) {
 			float dx = particles[i].x[0] - particles[j].x[0];
 			float dy = particles[i].x[1] - particles[j].x[1];
 			float r2 = dx*dx + dy*dy;
-			float z  = h*h - r2;
-
+			float z = pow(h,2) - r2;
 			if(z > 0) {
-				float rho_ij = C * z*z*z;
+				float rho_ij = C*z*z;
 				particles[i].density += rho_ij;
-				particles[j].density += rho_ij;
+				//particles[j].density += rho_ij;
 			}
 		}
 	}
@@ -63,15 +97,15 @@ void ParticleSystem::computeAccelerations() {
 				const float rho_j = particles[j].density;
 				float q = sqrt(r2)/h;
 				float u = 1 - q;
-				float w_0 = C_0 * u/(rho_i*rho_j);
+				float w_0 = C_0 * u/(rho_j);
 				float w_p = w_0 * C_p * (rho_i + rho_j - 2 * rho_0) * u/q;
 				float w_v = w_0 * C_v;
 				float dv_x = particles[i].v[0] - particles[j].v[0];
 				float dv_y = particles[i].v[1] - particles[j].v[1];
 				particles[i].a[0] += (w_p*dx + w_v*dv_x);
 				particles[i].a[1] += (w_p*dy + w_v*dv_y);
-				particles[j].a[0] += (w_p*dx + w_v*dv_x);
-				particles[j].a[1] += (w_p*dy + w_v*dv_y);
+				particles[j].a[0] -= (w_p*dx + w_v*dv_x);
+				particles[j].a[1] -= (w_p*dy + w_v*dv_y);
 			}
 		}
 	}
@@ -199,13 +233,12 @@ void ParticleSystem::normalizeMass() {
 	mass = 1;
 	computeDensities();
 	float rho_0 = params->rho_0;
-	float rho_2s = 0;
-	float rho_s = 0;
+	float rho_av = 0;
 
 	for(int i = 0; i < n; i++) {
-		rho_s += particles[i].density;
-		rho_2s += pow(rho_s,2);
+		rho_av += particles[i].density;
 	}
-	mass *= (rho_0 * rho_s)/rho_2s;
+	rho_av = rho_av / n;
+	mass = mass * rho_0/rho_av;
 }
 

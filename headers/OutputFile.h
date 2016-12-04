@@ -27,9 +27,22 @@ public:
 	}
 	void writeHeader();
 	void writeFrame();
-	void close(){outfile.close();}
+	void close(){
+	/* Id = -2 indicates end of file */
+		particle_details pdf;
+		pdf.x   = 0;
+		pdf.y   = 0;
+		pdf.vx  = 0;
+		pdf.vy  = 0;
+		pdf.ax  = 0;
+		pdf.ay  = 0;
+		pdf.rho = 0;
+		pdf.id  = -2;
+		outfile.write((char*)&pdf, sizeof(pdf));
+		outfile.close();
+	}
 
-	~OutputFile(){outfile.close();}
+	~OutputFile(){close();}
 private:
 	std::string fname;
 	Paramset* params;
