@@ -17,6 +17,8 @@ public:
 	void computeGradient(Particle* p1, Particle* p2, float h, float* gradient);
 	void computeLaplacian(Particle* p1, Particle* p2, float h, float* laplacian);
 	virtual ~Kernel(){};
+protected:
+	const static float  PI = 3.14159265358979;
 };
 
 
