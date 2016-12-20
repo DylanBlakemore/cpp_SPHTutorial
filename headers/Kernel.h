@@ -12,10 +12,17 @@
 
 class Kernel {
 public:
-	virtual void computeWeight(Particle* p1, Particle* p2, float h, float* weight);
+	virtual void computeWeight(Particle* p1, Particle* p2, float h, float* weight) {
+		weight[0] = 0;
+	}
 	/* gradient = float[2] */
-	void computeGradient(Particle* p1, Particle* p2, float h, float* gradient);
-	void computeLaplacian(Particle* p1, Particle* p2, float h, float* laplacian);
+	virtual void computeGradient(Particle* p1, Particle* p2, float h, float* gradient) {
+		gradient[0] = 0;
+		gradient[1] = 0;
+	}
+	virtual void computeLaplacian(Particle* p1, Particle* p2, float h, float* laplacian) {
+		laplacian[0] = 0;
+	}
 	virtual ~Kernel(){};
 protected:
 	const static float  PI = 3.14159265358979;

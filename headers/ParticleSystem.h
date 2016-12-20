@@ -47,8 +47,6 @@ private:
 	void computeDensities();
 	void placeParticles();
 	void normalizeMass();
-	float weightFunction(float r, float h);
-	float weightGradient(Particle* p1, Particle* p2, int dim, float h);
 };
 
 

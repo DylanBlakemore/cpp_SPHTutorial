@@ -7,57 +7,26 @@
 #include <math.h>
 #include <iostream>
 #include "../headers/ParticleSystem.h"
-
-float ParticleSystem::weightFunction(float r, float h) {
-	float func;
-	float normal = 10/(7 * PI_F);
-	float q = r/h;
-
-	if (q >= 2)
-		func = 0;
-	else if (q >= 0 && q < 1)
-		func = 0.25 * pow(2-q,3) - pow(1-q,3);
-	else if (q >= 1 && q < 2)
-		func = 0.25 * pow(2-q,3);
-
-	return func * normal;
-}
-
-float ParticleSystem::weightGradient(Particle* p1, Particle* p2, int dim, float h) {
-	float gradient = 0;
-
-	float dx = p1->x[0] - p2->x[0];
-	float dy = p1->x[1] - p2->x[1];
-	float r	 = sqrt(dx*dx + dy*dy);
-	float q = r/h;
-
-	if(q >= 2)
-		gradient = 0;
-	else if(q >= 1 && q < 2)
-		gradient = ((-3*pow(2 - q,2)) / (4*h)) * (p1->x[dim] - p2->x[dim])/r;
-	else if(q >= 0 && q < 1) {
-		gradient = ( (-3*pow(2 - q,2) / (4*h)) +
-					(-3*pow(1 - q,2)/h) ) * (p1->x[dim] - p2->x[dim])/r;
-	}
-
-	return gradient;
-}
+#include "../headers/PressureKernel.h"
+#include "../headers/DefaultKernel.h"
+#include "../headers/ViscosityKernel.h"
 
 void ParticleSystem::computeDensities() {
 	float h = params->h;
-	float C = 4 * mass/(PI_F * pow(h,8));
+	DefaultKernel kernel;
 
 	for(int i = 0; i < n; i++) {
 		particles[i].density = 0.0; // Reset density to 0
-		particles[i].density += 4 * mass / (PI_F * pow(h,2)); // Contribution of particle's density to itself
 
 		for(int j = 0; j < n; j++) {
 			float dx = particles[i].x[0] - particles[j].x[0];
 			float dy = particles[i].x[1] - particles[j].x[1];
 			float r2 = dx*dx + dy*dy;
 			float z = pow(h,2) - r2;
-			if(z > 0) {
-				float rho_ij = C*z*z;
+			if(z > 0 && i != j) {
+				float weight;
+				kernel.computeWeight(&particles[i], &particles[j], h, &weight);
+				float rho_ij = mass * weight;
 				particles[i].density += rho_ij;
 				//particles[j].density += rho_ij;
 			}
@@ -69,43 +38,56 @@ void ParticleSystem::computeAccelerations() {
 	// For simplicity, parameters are unpacked from Paramset struct
 	const float h 		= params->h;
 	const float rho_0 	= params->rho_0;
-	const float k 		= params->k;
 	const float mu		= params->mu;
 	const float g		= params->g;
+	const float c		= params->c;
+	const float sigma	= params->sigma;
 
 	computeDensities();
 
-	// Add gravitational force
-	for(int i = 0; i < n; i++) {
-		particles[i].a[0] = 0;
-		particles[i].a[1] = -g;
-	}
+	PressureKernel p_kernel;
+	ViscosityKernel v_kernel;
+	DefaultKernel d_kernel;
 
-	// Constants for interaction term
-	float C_0 = mass / (PI_F * pow(h,4));
-	float C_p = 15 * k;
-	float C_v = -40 * mu;
 
 	// Compute interactions
 	for(int i = 0; i < n; i++) {
-		const float rho_i = particles[i].density;
-		for(int j = i+1; j < n; j++) {
+		/* Gravity */
+		particles[i].a[0] = 0;
+		particles[i].a[1] = g;
+
+		float rho_i = particles[i].density;
+		float p_i = pow(c,2) * (rho_i - rho_0);
+
+		for(int j = 0; j < n; j++) {
 			float dx = particles[i].x[0] - particles[j].x[0];
 			float dy = particles[i].x[1] - particles[j].x[1];
 			float r2 = dx*dx + dy*dy;
-			if(r2 < pow(h,2)) {
-				const float rho_j = particles[j].density;
-				float q = sqrt(r2)/h;
-				float u = 1 - q;
-				float w_0 = C_0 * u/(rho_j);
-				float w_p = w_0 * C_p * (rho_i + rho_j - 2 * rho_0) * u/q;
-				float w_v = w_0 * C_v;
-				float dv_x = particles[i].v[0] - particles[j].v[0];
-				float dv_y = particles[i].v[1] - particles[j].v[1];
-				particles[i].a[0] += (w_p*dx + w_v*dv_x);
-				particles[i].a[1] += (w_p*dy + w_v*dv_y);
-				particles[j].a[0] -= (w_p*dx + w_v*dv_x);
-				particles[j].a[1] -= (w_p*dy + w_v*dv_y);
+
+			if(r2 < pow(h,2) && r2 > 0) {
+			/* Pressure term */
+				float rho_j = particles[j].density;
+				float p_j = pow(c,2) * (rho_j - rho_0);
+				float grad_p[2];
+				d_kernel.computeGradient(&particles[i], &particles[j], h, grad_p);
+				float p_term = -1 * mass * (p_i/pow(rho_i,2) + p_j/pow(rho_j,2));
+				particles[i].a[0] += (p_term * grad_p[0]);
+				particles[i].a[1] += (p_term * grad_p[1]);
+			/* Viscosity Term */
+				float grad2_v;
+				d_kernel.computeLaplacian(&particles[i], &particles[j], h, &grad2_v);
+				float v_term = mu * mass * grad2_v / (rho_j * rho_i);
+				particles[i].a[0] += v_term * (particles[i].v[0] - particles[j].v[0]);
+				particles[i].a[1] += v_term * (particles[i].v[1] - particles[j].v[1]);
+			/* Surface Tension */
+				/*float n[2];
+				float grad2_c;
+				d_kernel.computeGradient(&particles[i], &particles[j], h, n);
+				d_kernel.computeLaplacian(&particles[i], &particles[j], h, &grad2_c);
+				float mod_n = sqrt(n[0]*n[0] + n[1]*n[1]);
+				float st_const = -1 * sigma * grad2_c / mod_n;
+				particles[i].a[0] += st_const * (n[0]) /rho_i;
+				particles[i].a[1] += st_const * (n[1]) /rho_i;*/
 			}
 		}
 	}
@@ -197,7 +179,7 @@ void ParticleSystem::dampReflect(int which, float barrier, int i) {
 
 void ParticleSystem::placeParticles() {
 	float h = params->h;
-	float hh = h/1.3;
+	float hh = h/2;
 
 	int count = 0;
 

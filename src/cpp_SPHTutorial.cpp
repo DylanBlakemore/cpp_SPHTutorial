@@ -83,7 +83,7 @@ int main() {
 	/* Create domains in which to place particles and initialize the ParticleSystem object */
 	vector<DomainIndicator*> domains;
 
-	BoxIndicator box = BoxIndicator(0.0,0.3,0.0,0.6);
+	CircleIndicator box = CircleIndicator(0.5, 0.6, 0.2);
 	domains.push_back(&box);
 	/* ----------------------------------------------------------------------------------- */
 
@@ -113,7 +113,7 @@ int main() {
 	outfile.writeFrame();
 
 	float percent_inc = 10;;
-	float percent_done = 0;
+	float percent_done = 10;
 	float fraction_done = 0.0;
 
 	for(int frame = 0; frame < n_frames; frame++) {
@@ -126,8 +126,8 @@ int main() {
 		outfile.writeFrame();
 		fraction_done = (float)frame/(float)params.n_frames;
 		if(fraction_done >= percent_done/100) {
-			percent_done += percent_inc;
 			std::cout << percent_done << "% complete" << std::endl;
+			percent_done += percent_inc;
 		}
 	}
 	outfile.close();

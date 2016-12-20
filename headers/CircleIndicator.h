@@ -10,9 +10,9 @@
 
 #include "DomainIndicator.h"
 
-class CircelIndicator:public DomainIndicator {
+class CircleIndicator:public DomainIndicator {
 public:
-	CircelIndicator(float xcentre_in, float ycentre_in, float radius_in) {
+	CircleIndicator(float xcentre_in, float ycentre_in, float radius_in) {
 		xcentre = xcentre_in;
 		ycentre = ycentre_in;
 		radius = radius_in;
@@ -24,7 +24,7 @@ public:
 		float r2 = dx*dx + dy*dy;
 		return (r2 <= radius*radius);
 	}
-	~CircelIndicator(){}
+	~CircleIndicator(){}
 private:
 	float xcentre;
 	float ycentre;
